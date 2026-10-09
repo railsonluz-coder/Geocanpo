@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b6e79">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="GeoCampo">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>GeoCampo</title>
+<style>
+/* Layout: uma coluna estreita para uso com uma mão, navegação fixa embaixo, formulário em tela cheia. */
+:root {
+  --bg: #e9efed;
+  --surface: #ffffff;
+  --surface2: #dbe6e3;
+  --ink: #132421;
+  --muted: #4b625d;
+  --line: #bccdc8;
+  --accent: #0b6e79;
+  --accent-ink: #ffffff;
+  --warm: #b8481a;
+  --good: #1d7a4a;
+  --warn: #9a6200;
+  --bad: #b3261e;
+  --shadow: 0 1px 2px rgba(19,36,33,.12), 0 6px 18px rgba(19,36,33,.08);
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1716;
+    --surface: #14231f;
+    --surface2: #1d312c;
+    --ink: #e6efec;
+    --muted: #9ab3ac;
+    --line: #2b433d;
+    --accent: #5cc4cc;
+    --accent-ink: #052321;
+    --warm: #f08a5d;
+    --good: #62d197;
+    --warn: #f0b44d;
+    --bad: #ff8b82;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: var(--font); font-size: 16px; line-height: 1.4;
+  -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.app { max-width: 640px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; }
+header.top {
+  position: sticky; top: 0; z-index: 5;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px;
+  background: var(--bg); border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+header.top h1 { margin: 0; font-size: 1.1rem; letter-spacing: .01em; }
+header.top small { display: block; color: var(--muted); font-size: .78rem; }
+.gps-chip {
+  display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px;
+  background: var(--surface2); border: 1px solid var(--line); font-size: .85rem; font-weight: 600; white-space: nowrap;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.dot.good { background: var(--good); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+
+main { flex: 1; padding: 16px 16px calc(96px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; align-content: start; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; box-shadow: var(--shadow); }
+.card h2 { margin: 0 0 8px; font-size: 1rem; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+
+.coords { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 4px; }
+.coords div { background: var(--surface2); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.coords span { display: block; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.coords b { font-family: var(--mono); font-size: 1.05rem; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px;
+  border-radius: 12px; border: 1px solid var(--line); background: var(--surface2); font-weight: 650;
+}
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.btn.warm { background: var(--warm); color: #fff; border-color: transparent; }
+.btn.big { min-height: 64px; font-size: 1.15rem; width: 100%; }
+.btn.danger { color: var(--bad); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; }
+.row > * { flex: 1 1 140px; }
+
+/* Lista de pontos */
+.pt { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; width: 100%; text-align: left;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px; box-shadow: var(--shadow); }
+.pt .thumb { width: 56px; height: 56px; border-radius: 10px; background: var(--surface2) center/cover no-repeat; display: grid; place-items: center; color: var(--muted); font-size: .7rem; }
+.pt .t { font-weight: 700; overflow-wrap: anywhere; }
+.pt .s { color: var(--muted); font-size: .82rem; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.chip { font-size: .72rem; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: var(--surface2); font-variant-numeric: tabular-nums; }
+.pt .go { color: var(--muted); font-size: 1.4rem; }
+.empty { text-align: center; padding: 28px 12px; color: var(--muted); }
+
+/* Navegação inferior */
+nav.tabs {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-top: 1px solid var(--line);
+  padding: 6px 8px calc(env(safe-area-inset-bottom, 0px) + 6px);
+}
+nav.tabs .in { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+nav.tabs button { background: none; border: 0; border-radius: 12px; min-height: 52px; font-weight: 650; color: var(--muted); display: grid; gap: 1px; place-items: center; }
+nav.tabs button[aria-current="page"] { background: var(--surface2); color: var(--accent); }
+nav.tabs small { font-size: .72rem; }
+nav.tabs svg { width: 22px; height: 22px; }
+
+/* Formulário em tela cheia */
+.formview { position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.formview .wrap { max-width: 640px; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px calc(120px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 14px; }
+.formbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; background: var(--surface); border-top: 1px solid var(--line);
+  padding: 10px 16px calc(env(safe-area-inset-bottom, 0px) + 10px); }
+.formbar .in { max-width: 640px; margin: 0 auto; display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+.formhead { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.formhead h2 { margin: 0; font-size: 1.15rem; }
+.field { display: grid; gap: 6px; }
+.field > label, .field > .lab { font-weight: 650; font-size: .92rem; }
+.field input[type=text], .field input[type=number], .field select, .field textarea {
+  width: 100%; min-height: 48px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+.field textarea { min-height: 88px; resize: vertical; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 6px; }
+.seg button { min-height: 48px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); font-weight: 700; padding: 6px 4px; font-size: .92rem; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.seg.three button { font-size: .85rem; }
+.hint { font-size: .8rem; color: var(--muted); min-height: 1.1em; }
+.photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.photo { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--surface2); }
+.photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo button { position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: rgba(0,0,0,.65); color: #fff; font-size: 1.1rem; line-height: 1; }
+.banner { border-radius: 12px; padding: 12px 14px; background: var(--surface2); border: 1px solid var(--line); font-size: .9rem; }
+.banner.warn { border-color: var(--warn); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: .9rem; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+ol.steps { margin: 6px 0 0; padding-left: 20px; display: grid; gap: 6px; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 90px); z-index: 40;
+  background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 650; box-shadow: var(--shadow); max-width: 92vw; text-align: center; }
+@media (prefers-reduced-motion: no-preference) { .toast { animation: pop .18s ease-out; } @keyframes pop { from { opacity: 0; transform: translate(-50%, 8px); } } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div><h1>GeoCampo</h1><small>Inventário de geodiversidade</small></div>
+    <div class="gps-chip" id="gpsChip" role="status" aria-live="polite"><span class="dot" id="gpsDot"></span><span id="gpsChipTxt">GPS desligado</span></div>
+  </header>
+
+  <main id="main">
+    <!-- Aba Marcar -->
+    <section id="tab-marcar" class="tab" style="display:grid;gap:14px">
+      <div class="card">
+        <h2>Posição atual</h2>
+        <div class="coords">
+          <div><span>Latitude</span><b id="vLat">—</b></div>
+          <div><span>Longitude</span><b id="vLon">—</b></div>
+          <div><span>Altitude</span><b id="vAlt">—</b></div>
+          <div><span>Precisão</span><b id="vAcc">—</b></div>
+        </div>
+        <p class="hint" id="gpsHint">Ligue o GPS e espere a precisão ficar abaixo de 15 m antes de marcar.</p>
+        <div class="row">
+          <button class="btn" id="btnGps" type="button">Ligar GPS</button>
+        </div>
+      </div>
+      <button class="btn primary big" id="btnMark" type="button" disabled>Marcar ponto aqui</button>
+      <button class="btn" id="btnManual" type="button">Marcar sem GPS (digitar coordenada)</button>
+      <div class="banner" id="installBanner" hidden>
+        <b>Instale na tela de início.</b> No Safari, toque em Compartilhar e depois em "Adicionar à Tela de Início". Assim o GeoCampo abre sozinho e guarda seus pontos com segurança, inclusive sem internet.
+      </div>
+      <div class="card">
+        <h2>Hoje</h2>
+        <p class="muted" id="todaySummary" style="margin:0">Nenhum ponto marcado.</p>
+      </div>
+    </section>
+
+    <!-- Aba Pontos -->
+    <section id="tab-pontos" class="tab" hidden style="gap:10px">
+      <div id="list" style="display:grid;gap:10px"></div>
+    </section>
+
+    <!-- Aba Exportar -->
+    <section id="tab-exportar" class="tab" hidden style="gap:14px">
+      <div class="card">
+        <h2>Levar os pontos para o QGIS</h2>
+        <p class="muted small" id="exInfo" style="margin-top:0">—</p>
+        <div class="row">
+          <button class="btn primary" id="btnShare" type="button" disabled>Compartilhar pacote (.zip)</button>
+        </div>
+        <p class="hint">O pacote reúne pontos.csv, pontos.geojson e a pasta fotos. Pelo menu de compartilhar você escolhe AirDrop, Arquivos ou iCloud.</p>
+        <div class="row">
+          <button class="btn" id="btnCsv" type="button">Baixar CSV</button>
+          <button class="btn" id="btnGeo" type="button">Baixar GeoJSON</button>
+          <button class="btn" id="btnZip" type="button">Baixar .zip</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>No QGIS</h2>
+        <ol class="steps small">
+          <li>Descompacte o .zip numa pasta.</li>
+          <li>Arraste o arquivo <b>pontos.geojson</b> para o QGIS. O sistema de coordenadas é o WGS 84 (EPSG:4326).</li>
+          <li>Para reprojetar para a grade, use SIRGAS 2000 / Brazil Polyconic (EPSG:5880).</li>
+          <li>Os campos têm os mesmos nomes do projeto do QField, então os dois conjuntos de pontos podem ser unidos.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h2>Observador e dados</h2>
+        <div class="field">
+          <label for="observador">Observador</label>
+          <input type="text" id="observador" autocomplete="off">
+        </div>
+        <p class="hint" id="storageNote"></p>
+        <div id="wipeBox" style="margin-top:10px">
+          <button class="btn danger" id="btnWipe" type="button">Apagar todos os pontos</button>
+        </div>
+        <div id="wipeConfirm" hidden class="banner warn" style="margin-top:10px">
+          <b>Apagar todos os pontos e fotos deste aparelho?</b> Isso não pode ser desfeito. Exporte antes.
+          <div class="row" style="margin-top:10px"><button class="btn" id="btnWipeNo" type="button">Cancelar</button><button class="btn warm" id="btnWipeYes" type="button">Apagar tudo</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabs" aria-label="Seções">
+    <div class="in">
+      <button type="button" data-tab="marcar" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><small>Marcar</small></button>
+      <button type="button" data-tab="pontos">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg><small id="navPts">Pontos</small></button>
+      <button type="button" data-tab="exportar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg><small>Exportar</small></button>
+    </div>
+  </nav>
+</div>
+
+<!-- Formulário do ponto -->
+<div class="formview" id="formView" hidden role="dialog" aria-modal="true" aria-labelledby="formTitle">
+  <div class="wrap" id="formWrap"></div>
+  <div class="formbar"><div class="in">
+    <button class="btn" id="btnCancel" type="button">Cancelar</button>
+    <button class="btn primary" id="btnSave" type="button">Salvar ponto</button>
+  </div></div>
+</div>
+<div class="toast" id="toast" hidden role="status"></div>
+<input type="file" id="fileCam" accept="image/*" capture="environment" hidden>
+<input type="file" id="fileGal" accept="image/*" multiple hidden>
+
+<script>
+"use strict";
+/* ===== Listas de opções (mesmos códigos do projeto do QField) ===== */
+const L = {
+  nivel_rio: [["muito_baixo","Muito baixo (vazante forte)"],["baixo","Baixo"],["medio","Médio"],["alto","Alto (cheia)"]],
+  tipo_feicao: [["afloramento","Afloramento rochoso"],["estrutura","Estrutura (fratura, falha, dobra, acamamento)"],["forma_relevo","Forma de relevo (laje, bloco, ilha, barra)"],["canal_corredeira","Canal, corredeira ou cachoeira"],["deposito","Depósito sedimentar ou praia fluvial"],["solo","Solo ou regolito"],["marca_processo","Marca de processo (marmita, polimento, sulco)"],["outra","Outra"]],
+  ameaca: [["nenhuma","Nenhuma visível"],["hidrovia","Derrocamento ou obra da hidrovia"],["navegacao","Navegação e atracação"],["pesca","Pesca"],["lixo","Lixo"],["visitacao","Visitação sem controle"],["extracao","Extração de areia ou mineral"],["outra","Outra"]],
+  uso_atual: [["sem_uso","Sem uso aparente"],["pesca","Pesca"],["travessia","Travessia ou navegação"],["lazer","Banho e lazer"],["turismo","Turismo"],["tradicional","Uso tradicional da comunidade"]]
+};
+const S5 = ["Muito baixo","Baixo","Médio","Alto","Muito alto"];
+const SEG = {
+  val_cientifico: { label: "Valor científico", hint: "Importância para estudar a rocha, a estrutura ou o processo.", n: 5, names: S5 },
+  val_didatico: { label: "Valor didático", hint: "Facilidade de ensinar a geologia e o relevo neste ponto.", n: 5, names: S5 },
+  val_estetico: { label: "Valor estético (paisagem)", hint: "Beleza e destaque na paisagem.", n: 5, names: S5 },
+  val_cultural: { label: "Valor cultural", hint: "Uso tradicional, memória e ligação com a comunidade.", n: 5, names: S5 },
+  visibilidade: { label: "Visibilidade do ponto", n: 3, names: ["Pouco visível","Visível","Muito visível"] },
+  acessibilidade: { label: "Acesso até o ponto", n: 3, names: ["Difícil","Moderado","Fácil"] },
+  seguranca: { label: "Segurança para visitação", n: 3, names: ["Perigoso","Com cuidados","Seguro"] },
+  risco_degrad: { label: "Risco de degradação", n: 3, names: ["Baixo","Médio","Alto"] }
+};
+const COLS = ["id_ponto","data_hora","observador","nivel_rio","tipo_feicao","descricao","litologia","processo_forma","val_cientifico","val_didatico","val_estetico","val_cultural","visibilidade","acessibilidade","seguranca","risco_degrad","ameaca","uso_atual","foto","foto2","foto3","foto4","observacoes","lat","lon","alt_m","precisao_m"];
+const MAXFOTOS = 4;
+
+/* ===== Utilidades ===== */
+const $ = (s, r = document) => r.querySelector(s);
+const pad = n => String(n).padStart(2, "0");
+const stamp = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const labelOf = (list, v) => (list.find(x => x[0] === v) || [, v || ""])[1];
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === "class") e.className = v; else if (k === "text") e.textContent = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  for (const c of kids) if (c != null) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+}
+let toastTimer;
+function toast(msg) {
+  const t = $("#toast"); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.hidden = true), 2600);
+}
+function lsGet(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
+
+/* ===== Armazenamento (IndexedDB) ===== */
+const DB = {
+  db: null,
+  open() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open("geocampo", 1);
+      r.onupgradeneeded = () => {
+        r.result.createObjectStore("pontos", { keyPath: "id_ponto" });
+        r.result.createObjectStore("fotos", { keyPath: "key" });
+      };
+      r.onsuccess = () => { this.db = r.result; res(); };
+      r.onerror = () => rej(r.error);
+    });
+  },
+  run(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const tx = this.db.transaction(store, mode), s = tx.objectStore(store), q = fn(s);
+      tx.oncomplete = () => res(q && q.result);
+      tx.onerror = tx.onabort = () => rej(tx.error);
+    });
+  },
+  put: (store, v) => DB.run(store, "readwrite", s => s.put(v)),
+  get: (store, k) => DB.run(store, "readonly", s => s.get(k)),
+  del: (store, k) => DB.run(store, "readwrite", s => s.delete(k)),
+  all: store => DB.run(store, "readonly", s => s.getAll()),
+  clear: store => DB.run(store, "readwrite", s => s.clear())
+};
+let points = [];
+async function loadPoints() {
+  points = (await DB.all("pontos")).sort((a, b) => (a.data_hora < b.data_hora ? 1 : -1));
+}
+
+/* ===== GPS ===== */
+let pos = null, watchId = null;
+function gpsClass(acc) { return acc == null ? "" : acc <= 15 ? "good" : acc <= 40 ? "warn" : "bad"; }
+function renderGps() {
+  const dot = $("#gpsDot"), txt = $("#gpsChipTxt");
+  dot.className = "dot " + (pos ? gpsClass(pos.acc) : "");
+  if (watchId === null) { txt.textContent = "GPS desligado"; }
+  else if (!pos) { txt.textContent = "Procurando sinal"; }
+  else { txt.textContent = "± " + Math.round(pos.acc) + " m"; }
+  $("#vLat").textContent = pos ? pos.lat.toFixed(6) : "—";
+  $("#vLon").textContent = pos ? pos.lon.toFixed(6) : "—";
+  $("#vAlt").textContent = pos && pos.alt != null ? Math.round(pos.alt) + " m" : "—";
+  $("#vAcc").textContent = pos ? "± " + pos.acc.toFixed(1) + " m" : "—";
+  $("#btnMark").disabled = !pos;
+  $("#btnGps").textContent = watchId === null ? "Ligar GPS" : "Desligar GPS";
+  const h = $("#gpsHint");
+  if (watchId === null) h.textContent = "Ligue o GPS e espere a precisão ficar abaixo de 15 m antes de marcar.";
+  else if (!pos) h.textContent = "Aguardando o primeiro sinal. Em área aberta costuma levar menos de um minuto.";
+  else if (pos.acc > 40) h.textContent = "Precisão ruim. Afaste-se de barrancos e vegetação densa, ou espere um pouco.";
+  else if (pos.acc > 15) h.textContent = "Precisão razoável. Esperar mais alguns segundos melhora a leitura.";
+  else h.textContent = "Boa precisão. Pode marcar.";
+}
+function startGps() {
+  if (!("geolocation" in navigator)) { toast("Este aparelho não oferece GPS ao navegador."); return; }
+  if (watchId !== null) return;
+  watchId = navigator.geolocation.watchPosition(p => {
+    pos = { lat: p.coords.latitude, lon: p.coords.longitude, alt: p.coords.altitude, acc: p.coords.accuracy, ts: p.timestamp };
+    renderGps();
+  }, err => {
+    const msg = err.code === 1 ? "Permissão de localização negada. Ative em Ajustes > Safari > Localização." : "Sem sinal de GPS agora.";
+    toast(msg);
+    if (err.code === 1) stopGps();
+  }, { enableHighAccuracy: true, maximumAge: 2000, timeout: 30000 });
+  lsSet("gps_on", "1");
+  requestWake();
+  renderGps();
+}
+function stopGps() {
+  if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+  watchId = null; pos = null; lsSet("gps_on", "0"); releaseWake(); renderGps();
+}
+let wake = null;
+async function requestWake() { try { if ("wakeLock" in navigator && document.visibilityState === "visible") wake = await navigator.wakeLock.request("screen"); } catch {} }
+function releaseWake() { try { wake && wake.release(); } catch {} wake = null; }
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && watchId !== null) requestWake(); });
+
+/* ===== Abas ===== */
+function showTab(name) {
+  document.querySelectorAll(".tab").forEach(s => (s.hidden = s.id !== "tab-" + name));
+  document.querySelectorAll("nav.tabs button").forEach(b => {
+    if (b.dataset.tab === name) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  if (name === "pontos") renderList();
+  if (name === "exportar") prepareExport();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => showTab(b.dataset.tab)));
+
+/* ===== Lista de pontos ===== */
+const urlCache = new Map();
+async function thumbUrl(key) {
+  if (urlCache.has(key)) return urlCache.get(key);
+  const f = await DB.get("fotos", key); if (!f) return null;
+  const u = URL.createObjectURL(f.blob); urlCache.set(key, u); return u;
+}
+async function renderList() {
+  const box = $("#list"); box.replaceChildren();
+  $("#navPts").textContent = points.length ? `Pontos (${points.length})` : "Pontos";
+  if (!points.length) { box.append(el("div", { class: "card empty", text: "Nenhum ponto ainda. Volte para Marcar e registre o primeiro." })); return; }
+  for (const p of points) {
+    const thumb = el("div", { class: "thumb", text: "sem foto" });
+    if (p.fotos && p.fotos[0]) thumbUrl(p.fotos[0]).then(u => { if (u) { thumb.textContent = ""; thumb.style.backgroundImage = `url(${u})`; } });
+    const chips = el("div", { class: "chips" });
+    [["C", p.val_cientifico], ["D", p.val_didatico], ["E", p.val_estetico], ["Cu", p.val_cultural]].forEach(([k, v]) => v && chips.append(el("span", { class: "chip", text: k + v })));
+    if (p.risco_degrad) chips.append(el("span", { class: "chip", text: "Risco " + ["", "baixo", "médio", "alto"][p.risco_degrad] }));
+    const b = el("button", { class: "pt", type: "button", onclick: () => openForm(p) },
+      thumb,
+      el("div", {}, el("div", { class: "t", text: labelOf(L.tipo_feicao, p.tipo_feicao) || "Sem tipo definido" }),
+        el("div", { class: "s", text: `${p.id_ponto} · ${p.data_hora.slice(11, 16)}${p.precisao_m != null ? " · ±" + Math.round(p.precisao_m) + " m" : " · coordenada digitada"}` }), chips),
+      el("span", { class: "go", text: "›" }));
+    box.append(b);
+  }
+}
+function renderToday() {
+  const today = stamp(new Date()).slice(0, 10);
+  const n = points.filter(p => p.data_hora.startsWith(today)).length;
+  $("#todaySummary").textContent = n ? `${n} ${n === 1 ? "ponto marcado" : "pontos marcados"} hoje, ${points.length} no total.` : (points.length ? `Nenhum ponto hoje, ${points.length} no total.` : "Nenhum ponto marcado.");
+  $("#navPts").textContent = points.length ? `Pontos (${points.length})` : "Pontos";
+}
+
+/* ===== Formulário ===== */
+let draft = null, draftPhotos = [], isNew = true;
+function newId() {
+  const d = new Date(); let id = `P${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  while (points.some(p => p.id_ponto === id)) id += "x"; return id;
+}
+function openForm(existing, manual) {
+  isNew = !existing;
+  if (existing) draft = JSON.parse(JSON.stringify(existing));
+  else {
+    draft = { id_ponto: newId(), data_hora: stamp(new Date()), observador: lsGet("observador", "Railson"), nivel_rio: lsGet("ultimo_nivel", ""), tipo_feicao: "", descricao: "", litologia: "", processo_forma: "", observacoes: "", fotos: [],
+      lat: manual ? null : pos.lat, lon: manual ? null : pos.lon, alt_m: manual || pos.alt == null ? null : Math.round(pos.alt * 10) / 10, precisao_m: manual ? null : Math.round(pos.acc * 10) / 10 };
+  }
+  draftPhotos = []; // {key, blob?, url, novo}
+  (draft.fotos || []).forEach(k => draftPhotos.push({ key: k, novo: false, url: null }));
+  buildForm(manual);
+  $("#formView").hidden = false; $("#formView").scrollTop = 0; document.body.style.overflow = "hidden";
+  draftPhotos.forEach(async ph => { if (!ph.novo) { ph.url = await thumbUrl(ph.key); renderPhotos(); } });
+}
+function closeForm() { $("#formView").hidden = true; document.body.style.overflow = ""; draft = null; }
+
+function fieldSelect(id, label, list) {
+  const s = el("select", { id }); s.append(el("option", { value: "", text: "Escolher…" }));
+  list.forEach(([v, t]) => s.append(el("option", { value: v, text: t })));
+  s.value = draft[id] || ""; s.addEventListener("change", () => (draft[id] = s.value));
+  return el("div", { class: "field" }, el("label", { for: id, text: label }), s);
+}
+function fieldText(id, label, multi, ph) {
+  const i = multi ? el("textarea", { id, rows: "3" }) : el("input", { id, type: "text", autocomplete: "off" });
+  if (ph) i.setAttribute("placeholder", ph);
+  i.value = draft[id] || ""; i.addEventListener("input", () => (draft[id] = i.value));
+  return el("div", { class: "field" }, el("label", { for: id, text: label }), i);
+}
+function fieldSeg(id) {
+  const cfg = SEG[id], hint = el("div", { class: "hint" });
+  const wrap = el("div", { class: "seg" + (cfg.n === 3 ? " three" : ""), role: "group", "aria-label": cfg.label });
+  const upd = () => {
+    [...wrap.children].forEach((b, i) => b.setAttribute("aria-pressed", String(draft[id] === i + 1)));
+    hint.textContent = draft[id] ? `${draft[id]} · ${cfg.names[draft[id] - 1]}` + (cfg.hint ? ` — ${cfg.hint}` : "") : (cfg.hint || "");
+  };
+  for (let i = 1; i <= cfg.n; i++)
+    wrap.append(el("button", { type: "button", "aria-pressed": "false", text: cfg.n === 5 ? String(i) : cfg.names[i - 1], onclick: () => { draft[id] = draft[id] === i ? null : i; upd(); } }));
+  upd();
+  return el("div", { class: "field" }, el("div", { class: "lab", text: cfg.label }), wrap, hint);
+}
+function buildForm(manual) {
+  const w = $("#formWrap"); w.replaceChildren();
+  w.append(el("div", { class: "formhead" }, el("h2", { id: "formTitle", text: isNew ? "Novo ponto" : "Editar ponto" }), el("span", { class: "muted small", text: draft.id_ponto })));
+  // posição
+  const coordCard = el("div", { class: "card" });
+  if (manual || draft.lat == null) {
+    coordCard.append(el("h2", { text: "Coordenada" }), el("p", { class: "muted small", style: "margin-top:0", text: "Digite em graus decimais (ex.: -5.123456). O Pará fica no hemisfério sul e a oeste de Greenwich, então os dois valores são negativos." }));
+    const la = el("input", { id: "inLat", type: "text", inputmode: "decimal", placeholder: "Latitude" }), lo = el("input", { id: "inLon", type: "text", inputmode: "decimal", placeholder: "Longitude" });
+    la.value = draft.lat ?? ""; lo.value = draft.lon ?? "";
+    la.addEventListener("input", () => (draft.lat = parseFloat(la.value.replace(",", ".")) || null));
+    lo.addEventListener("input", () => (draft.lon = parseFloat(lo.value.replace(",", ".")) || null));
+    coordCard.append(el("div", { class: "row" }, el("div", { class: "field" }, el("label", { for: "inLat", text: "Latitude" }), la), el("div", { class: "field" }, el("label", { for: "inLon", text: "Longitude" }), lo)));
+  } else {
+    coordCard.append(el("h2", { text: "Posição registrada" }),
+      el("dl", { class: "kv" }, el("dt", { text: "Latitude" }), el("dd", { text: draft.lat.toFixed(6) }), el("dt", { text: "Longitude" }), el("dd", { text: draft.lon.toFixed(6) }),
+        el("dt", { text: "Altitude" }), el("dd", { text: draft.alt_m != null ? draft.alt_m + " m" : "—" }), el("dt", { text: "Precisão" }), el("dd", { text: draft.precisao_m != null ? "± " + draft.precisao_m + " m" : "—" })),
+      el("div", { class: "row", style: "margin-top:10px" },
+        el("a", { class: "btn", href: `https://maps.apple.com/?ll=${draft.lat},${draft.lon}&q=Ponto`, target: "_blank", rel: "noopener", text: "Ver no Mapas" })));
+  }
+  w.append(coordCard);
+  // local e feição
+  const c1 = el("div", { class: "card", style: "display:grid;gap:14px" });
+  c1.append(el("h2", { style: "margin:0", text: "O que há aqui" }), fieldSelect("nivel_rio", "Nível do rio hoje", L.nivel_rio), fieldSelect("tipo_feicao", "Tipo de feição", L.tipo_feicao),
+    fieldText("descricao", "Descrição do que se vê", true), fieldText("litologia", "Rocha ou material (se identificado)", false, "ex.: arenito, quartzito, gnaisse"), fieldText("processo_forma", "Processo ou forma associada", false, "ex.: marmitas, polimento, fraturas"));
+  w.append(c1);
+  const c2 = el("div", { class: "card", style: "display:grid;gap:16px" });
+  c2.append(el("h2", { style: "margin:0", text: "Valor do ponto (1 a 5)" }), fieldSeg("val_cientifico"), fieldSeg("val_didatico"), fieldSeg("val_estetico"), fieldSeg("val_cultural"));
+  w.append(c2);
+  const c3 = el("div", { class: "card", style: "display:grid;gap:16px" });
+  c3.append(el("h2", { style: "margin:0", text: "Visitação e conservação" }), fieldSeg("visibilidade"), fieldSeg("acessibilidade"), fieldSeg("seguranca"), fieldSeg("risco_degrad"),
+    fieldSelect("ameaca", "Principal ameaça observada", L.ameaca), fieldSelect("uso_atual", "Uso atual do local", L.uso_atual));
+  w.append(c3);
+  // fotos
+  const c4 = el("div", { class: "card" });
+  c4.append(el("h2", { text: "Fotos" }), el("div", { class: "photos", id: "photoGrid" }),
+    el("div", { class: "row", style: "margin-top:10px" }, el("button", { class: "btn", type: "button", id: "btnCam", text: "Tirar foto" }), el("button", { class: "btn", type: "button", id: "btnGal", text: "Da galeria" })),
+    el("p", { class: "hint", id: "photoHint" }));
+  w.append(c4);
+  const c5 = el("div", { class: "card" }); c5.append(fieldText("observacoes", "Observações", true)); w.append(c5);
+  if (!isNew) {
+    const del = el("div", { class: "card" });
+    del.append(el("button", { class: "btn danger", type: "button", id: "btnDel", text: "Excluir este ponto" }),
+      el("div", { id: "delConfirm", hidden: "", class: "banner warn", style: "margin-top:10px" }, el("b", { text: "Excluir o ponto e suas fotos?" }),
+        el("div", { class: "row", style: "margin-top:10px" }, el("button", { class: "btn", type: "button", id: "btnDelNo", text: "Cancelar" }), el("button", { class: "btn warm", type: "button", id: "btnDelYes", text: "Excluir" }))));
+    w.append(del);
+    $("#btnDel", w).addEventListener("click", () => ($("#delConfirm", w).hidden = false));
+    $("#btnDelNo", w).addEventListener("click", () => ($("#delConfirm", w).hidden = true));
+    $("#btnDelYes", w).addEventListener("click", deletePoint);
+  }
+  $("#btnCam", w).addEventListener("click", () => $("#fileCam").click());
+  $("#btnGal", w).addEventListener("click", () => $("#fileGal").click());
+  renderPhotos();
+}
+function renderPhotos() {
+  const g = $("#photoGrid"); if (!g) return; g.replaceChildren();
+  draftPhotos.forEach((ph, i) => {
+    const box = el("div", { class: "photo" });
+    if (ph.url) box.append(el("img", { src: ph.url, alt: "Foto " + (i + 1) }));
+    box.append(el("button", { type: "button", "aria-label": "Remover foto " + (i + 1), text: "×", onclick: () => { draftPhotos.splice(i, 1); renderPhotos(); } }));
+    g.append(box);
+  });
+  $("#photoHint").textContent = `${draftPhotos.length} de ${MAXFOTOS} fotos. Elas são reduzidas para economizar espaço.`;
+  $("#btnCam").disabled = $("#btnGal").disabled = draftPhotos.length >= MAXFOTOS;
+}
+async function shrink(file) {
+  let bmp;
+  try { bmp = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+  catch { bmp = await new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = URL.createObjectURL(file); }); }
+  const w = bmp.width, h = bmp.height, k = Math.min(1, 1600 / Math.max(w, h));
+  const c = document.createElement("canvas"); c.width = Math.round(w * k); c.height = Math.round(h * k);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(b => res(b), "image/jpeg", 0.82));
+}
+async function addFiles(files) {
+  for (const f of files) {
+    if (draftPhotos.length >= MAXFOTOS) { toast("Limite de 4 fotos por ponto."); break; }
+    try { const blob = await shrink(f); draftPhotos.push({ key: `${draft.id_ponto}_${Date.now()}_${draftPhotos.length}`, blob, novo: true, url: URL.createObjectURL(blob) }); }
+    catch { toast("Não consegui ler essa foto."); }
+  }
+  renderPhotos();
+}
+$("#fileCam").addEventListener("change", e => { addFiles([...e.target.files]); e.target.value = ""; });
+$("#fileGal").addEventListener("change", e => { addFiles([...e.target.files]); e.target.value = ""; });
+
+async function savePoint() {
+  if (draft.lat == null || draft.lon == null || Math.abs(draft.lat) > 90 || Math.abs(draft.lon) > 180) { toast("Informe uma coordenada válida."); return; }
+  const btn = $("#btnSave"); btn.disabled = true;
+  try {
+    const oldKeys = isNew ? [] : ((points.find(p => p.id_ponto === draft.id_ponto) || {}).fotos || []);
+    const keep = new Set(draftPhotos.map(p => p.key));
+    for (const k of oldKeys) if (!keep.has(k)) { await DB.del("fotos", k); urlCache.delete(k); }
+    for (const ph of draftPhotos) if (ph.novo) await DB.put("fotos", { key: ph.key, blob: ph.blob });
+    draft.fotos = draftPhotos.map(p => p.key);
+    await DB.put("pontos", draft);
+    if (draft.nivel_rio) lsSet("ultimo_nivel", draft.nivel_rio);
+    await loadPoints(); renderToday(); closeForm(); toast("Ponto salvo."); renderList(); exportFile = null;
+  } catch (e) { toast("Não consegui salvar. Exporte o que já tem e reinicie o app."); }
+  btn.disabled = false;
+}
+async function deletePoint() {
+  const p = points.find(x => x.id_ponto === draft.id_ponto);
+  for (const k of (p && p.fotos) || []) { await DB.del("fotos", k); urlCache.delete(k); }
+  await DB.del("pontos", draft.id_ponto); await loadPoints(); renderToday(); closeForm(); renderList(); exportFile = null; toast("Ponto excluído.");
+}
+$("#btnSave").addEventListener("click", savePoint);
+$("#btnCancel").addEventListener("click", closeForm);
+$("#btnMark").addEventListener("click", () => { if (pos) openForm(null, false); });
+$("#btnManual").addEventListener("click", () => openForm(null, true));
+$("#btnGps").addEventListener("click", () => (watchId === null ? startGps() : stopGps()));
+
+/* ===== Exportação ===== */
+function csvCell(v) { if (v == null) return ""; const s = String(v); return /[",\n\r;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function pointRow(p) {
+  const r = { ...p }; const f = p.fotos || [];
+  ["foto", "foto2", "foto3", "foto4"].forEach((c, i) => (r[c] = f[i] ? `fotos/${p.id_ponto}_${i + 1}.jpg` : ""));
+  return r;
+}
+function buildCsv() {
+  const rows = points.slice().reverse().map(pointRow);
+  return "﻿" + COLS.join(",") + "\n" + rows.map(r => COLS.map(c => csvCell(r[c])).join(",")).join("\n") + "\n";
+}
+function buildGeo() {
+  const feats = points.slice().reverse().map(p => {
+    const r = pointRow(p), props = {}; COLS.forEach(c => { if (c !== "lat" && c !== "lon") props[c] = r[c] ?? null; }); props.lat = r.lat; props.lon = r.lon;
+    return { type: "Feature", properties: props, geometry: { type: "Point", coordinates: p.alt_m != null ? [p.lon, p.lat, p.alt_m] : [p.lon, p.lat] } };
+  });
+  return JSON.stringify({ type: "FeatureCollection", name: "pontos_geocampo", crs: { type: "name", properties: { name: "urn:ogc:def:crs:OGC:1.3:CRS84" } }, features: feats }, null, 1);
+}
+/* ZIP sem compressão (suficiente: as fotos já são JPEG) */
+const CRC = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC[(c ^ u8[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files) {
+  const enc = new TextEncoder(), parts = [], cen = []; let off = 0; const d = new Date();
+  const tm = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1), dt = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  for (const f of files) {
+    const name = enc.encode(f.name), crc = crc32(f.data), size = f.data.length;
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true); lh.setUint16(10, tm, true); lh.setUint16(12, dt, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, size, true); lh.setUint32(22, size, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, f.data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, tm, true); ch.setUint16(14, dt, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, size, true); ch.setUint32(24, size, true); ch.setUint16(28, name.length, true); ch.setUint32(42, off, true);
+    cen.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + size;
+  }
+  const cs = cen.reduce((a, b) => a + b.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true); end.setUint32(12, cs, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...cen, new Uint8Array(end.buffer)], { type: "application/zip" });
+}
+let exportFile = null, building = false;
+async function prepareExport() {
+  const info = $("#exInfo"), share = $("#btnShare");
+  const nF = points.reduce((a, p) => a + (p.fotos ? p.fotos.length : 0), 0);
+  info.textContent = points.length ? `${points.length} ${points.length === 1 ? "ponto" : "pontos"} e ${nF} ${nF === 1 ? "foto" : "fotos"} guardados neste aparelho.` : "Ainda não há pontos para exportar.";
+  $("#storageNote").textContent = "Os dados ficam só neste aparelho. Exporte ao fim de cada dia de campo.";
+  $("#observador").value = lsGet("observador", "Railson");
+  share.disabled = true;
+  if (!points.length || building) return;
+  if (exportFile && exportFile.n === points.length + ":" + nF) { share.disabled = false; return; }
+  building = true;
+  try {
+    const enc = new TextEncoder(), files = [{ name: "pontos.csv", data: enc.encode(buildCsv()) }, { name: "pontos.geojson", data: enc.encode(buildGeo()) }];
+    for (const p of points) for (let i = 0; i < (p.fotos || []).length; i++) {
+      const f = await DB.get("fotos", p.fotos[i]); if (f) files.push({ name: `fotos/${p.id_ponto}_${i + 1}.jpg`, data: new Uint8Array(await f.blob.arrayBuffer()) });
+    }
+    const d = stamp(new Date()).slice(0, 10).replace(/-/g, ""), blob = makeZip(files);
+    exportFile = { n: points.length + ":" + nF, blob, file: new File([blob], `geocampo_${d}.zip`, { type: "application/zip" }) };
+    share.disabled = false;
+  } catch { toast("Não consegui montar o pacote."); }
+  building = false;
+}
+function saveBlob(blob, name) {
+  const u = URL.createObjectURL(blob), a = el("a", { href: u, download: name }); document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 30000);
+}
+const dstr = () => stamp(new Date()).slice(0, 10).replace(/-/g, "");
+$("#btnCsv").addEventListener("click", () => points.length ? saveBlob(new Blob([buildCsv()], { type: "text/csv" }), `pontos_${dstr()}.csv`) : toast("Não há pontos."));
+$("#btnGeo").addEventListener("click", () => points.length ? saveBlob(new Blob([buildGeo()], { type: "application/geo+json" }), `pontos_${dstr()}.geojson`) : toast("Não há pontos."));
+$("#btnZip").addEventListener("click", async () => { await prepareExport(); exportFile ? saveBlob(exportFile.blob, exportFile.file.name) : toast("Não há pontos."); });
+$("#btnShare").addEventListener("click", async () => {
+  if (!exportFile) return;
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [exportFile.file] })) await navigator.share({ files: [exportFile.file], title: "Pontos GeoCampo" });
+    else saveBlob(exportFile.blob, exportFile.file.name);
+  } catch (e) { if (e && e.name !== "AbortError") toast("Compartilhar falhou. Use Baixar .zip."); }
+});
+$("#observador").addEventListener("input", e => lsSet("observador", e.target.value));
+$("#btnWipe").addEventListener("click", () => { $("#wipeConfirm").hidden = false; $("#wipeBox").hidden = true; });
+$("#btnWipeNo").addEventListener("click", () => { $("#wipeConfirm").hidden = true; $("#wipeBox").hidden = false; });
+$("#btnWipeYes").addEventListener("click", async () => {
+  await DB.clear("pontos"); await DB.clear("fotos"); urlCache.clear(); await loadPoints(); exportFile = null; renderToday(); prepareExport();
+  $("#wipeConfirm").hidden = true; $("#wipeBox").hidden = false; toast("Tudo apagado.");
+});
+
+/* ===== Início ===== */
+(async function init() {
+  const standalone = window.navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+  if (!standalone && /iphone|ipad|ipod/i.test(navigator.userAgent)) $("#installBanner").hidden = false;
+  try { await DB.open(); await loadPoints(); }
+  catch { toast("Este navegador não permite guardar dados. Abra no Safari normal, fora do modo privado."); }
+  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch {}
+  renderToday(); renderGps();
+  if (lsGet("gps_on", "0") === "1") startGps();
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>

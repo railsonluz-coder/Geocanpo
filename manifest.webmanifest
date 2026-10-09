@@ -1,0 +1,16 @@
+{
+  "name": "GeoCampo - Inventário de geodiversidade",
+  "short_name": "GeoCampo",
+  "description": "Marca pontos com GPS, registra feições de geodiversidade e fotos em campo, e exporta para o QGIS.",
+  "lang": "pt-BR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c1716",
+  "theme_color": "#0b6e79",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
